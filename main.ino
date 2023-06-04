@@ -84,7 +84,7 @@ void PrintAt(uint8_t _x, bool _y, const byte* _str) {                           
     lcd.printstr(_str);
 }
 
-bool IsItemAvalible(int i) {                                                        // Return true if there item in the belt.
+bool IsItemAvalible(uint8_t i) {                                                    // Return true if there item in the belt.
     digitalWrite(trig[i], LOW);
     delayMicroseconds(2);
     digitalWrite(trig[i], HIGH);
@@ -95,7 +95,7 @@ bool IsItemAvalible(int i) {                                                    
     return distanceInCm <= fullDistanceInCm;
 }
 
-void BuyItem(int item) {
+void BuyItem(uint8_t item) {
     score -= itemCost[item] * 10;                                                   // Paying for the item.
     lcd.clear();
     lcd.print("Buying item!");
@@ -112,6 +112,13 @@ void BuyItem(int item) {
     EnterShop();
 }
 
+void ShowItem(uint8_t item) {                                                       // Showing item if player have enough money and the item is avalible.
+    if (isItemAvalible[item] && score / 10 >= itemCost[item]) {
+        sprintf(string, "%i.%s|$%i", item, itemName[item], itemCost[item]);
+        lcd.print(string);
+    }
+}
+
 // =============================================================================
 // Enter functions
 // =============================================================================
@@ -120,7 +127,6 @@ void EnterIntro() {
     lcd.clear();
     lcd.print("Builded by Gabi.");
     PrintAt(0, 1, "Coded   by Ron .");
-
     delay(200);
     for (uint8_t i = 0; i < 15; i++) {
         delay(200);
@@ -149,7 +155,7 @@ void EnterGame() {
     for (size_t i = 0; i < ENEMY_AMOUNT; i++) {                                     // Seting randomly the positon of every enemy.
         enemies[i].x = 16 + random(ENEMY_AMOUNT * 10);                              // Changing the enemy positon.
         enemies[i].y = random(2);
-        enemies[i].sprite = ENEMY_CHAR[random(ENEMY_SPRITE_COUNT)];
+        enemies[i].sprite = ENEMY_CHAR[random(ENEMY_SPRITE_COUNT)];                 // Changing the enemy sprite.
     }
     currentState = PLAYING;
     lcd.clear();
@@ -162,7 +168,7 @@ void EnterEndScreen() {
     char string[16];
     lcd.clear();
     PrintAt(4, 0, "You died!");
-    sprintf(string, "Score:%d ", score / 10);
+    sprintf(string, "Score:%d ", score / 10);                                       // Convert the score to a string and store it in 'string' variable.
     PrintAt(0, 1, string);
     delay(3000);
     lcd.clear();
@@ -179,6 +185,26 @@ void EnterShop() {
     currentState = SHOP;
 }
 
+void UpdateEnemies() {
+    if (currentTimeInMillis % updateTimeDelayInMillis != 0)                     // Update the enemies position only every x time.
+        return;                      
+    score++;                                                                    // Adding score.
+    for (size_t c = 0; c < ENEMY_AMOUNT; c++) {                                 // Updating every enemy.
+        enemies[c].x--;                                                         // Move enemy left.
+        if (enemies[c].x < 0) {                                                 // Check if enemy is not out of the bounds of the Lcd screen.
+            enemies[c].x = 16 + random(ENEMY_AMOUNT * 10);                      // Set the enemy position randomly.
+            enemies[c].y = random(2);
+            enemies[c].sprite = ENEMY_CHAR[random(ENEMY_SPRITE_COUNT)];         // Set the enemy sprite randomly.
+        }
+        if (enemies[c].x != 0)
+        continue;                                                               // Checking if the enemy is in the positon x of the player.
+        if (enemies[c].y == playerY) {                                          // Checking if the enemy y is the same as the player y.
+            EnterEndScreen();
+            return;
+        }
+    }
+}
+
 // =============================================================================
 // Update functions
 // =============================================================================
@@ -189,20 +215,11 @@ void UpdateShop() {
         shopTextI = !shopTextI;
         char string[16];
         if (shopTextI) {
-            if (isItemAvalible[0] && score / 10 >= itemCost[0]) {                   // Showing item 1 if player have enough money and the item is avalible.
-                sprintf(string, "1.%s|$%i", itemName[0], itemCost[0]);
-                lcd.print(string);
-            }
-            if (isItemAvalible[1] && score / 10 >= itemCost[1]) {                   // Showing item 2 if player have enough money and the item is avalible.
-                sprintf(string, "2.%s|$%i", itemName[1], itemCost[1]);
-                PrintAt(0, 1, string);
-            }
+            ShowItem(0);                                                            // Showing item 1 if player have enough money and the item is avalible.
+            ShowItem(1);
         }
         else {
-            if (isItemAvalible[2] && score / 10 >= itemCost[2]) {                   // Showing item 3 if player have enough money and the item is avalible.
-                sprintf(string, "3.%s|$%i", itemName[2], itemCost[2]);
-                lcd.print(string);
-            }
+            ShowItem(2);
             PrintAt(0, 1, "4.Play");
         }
     }
@@ -243,12 +260,12 @@ void UpdateEndScreen() {
 
 void PlayerInput() {
     char key = keypad.getKey();
-    if (key == '2') {                                                               // Up
+    if (key == '2') {                                                               // Move player up.
         if (playerY != 0)
             isNeededToUpdateLcd = true;
         playerY = 0;
     }
-    else if (key == '8') {                                                          // Down
+    else if (key == '8') {                                                          // Move player down.
         if (playerY != 1)
             isNeededToUpdateLcd = true;
         playerY = 1;
@@ -257,29 +274,11 @@ void PlayerInput() {
 
 void UpdateGame() {
     PlayerInput();
-    if (currentTimeInMillis % updateTimeDelayInMillis == 0) {                       // Update the enemies position only every x time.
-        score++;                                                                    // Adding score.
-        for (size_t c = 0; c < ENEMY_AMOUNT; c++) {                                 // Updating every enemy.
-            enemies[c].x--;                                                         // Move enemy left.
-            if (enemies[c].x < 0) {                                                 // Check if enemy is not out of the bounds of the Lcd screen.
-                enemies[c].x = 16 + random(ENEMY_AMOUNT * 10);                      // Set the enemy position randomly.
-                enemies[c].y = random(2);
-                enemies[c].sprite = ENEMY_CHAR[random(ENEMY_SPRITE_COUNT)];
-            }
-        }
-    }
+    UpdateEnemies();
     if (currentTimeInMillis % UPDATE_SPEED_DELAY_IN_MILLIS == 0) {                  // Making the enemies positon to update faster every x time.
         updateTimeDelayInMillis -= 1;
         if (updateTimeDelayInMillis < 100)                                          // Clamping the update speed.
             updateTimeDelayInMillis = 100;
-    }
-    for (size_t c = 0; c < ENEMY_AMOUNT; c++) {                                     // Checking every enemy for collision with player.
-        if (enemies[c].x != 0)
-            continue;                                                               // Checking if the enemy is in the positon x of the player.
-        if (enemies[c].y == playerY) {                                              // Checcking if the enemy y is the same as the player y.
-            EnterEndScreen();
-            return;
-        }
     }
     if (currentTimeInMillis % updateTimeDelayInMillis == 0 || isNeededToUpdateLcd) { // Update the lcd screen every x time or when the player moved.
         UpdateGameLcd();
@@ -298,12 +297,10 @@ void setup() {
         pinMode(trig[i], OUTPUT);
         pinMode(echo[i], INPUT);
     }
-
     lcd.createChar(PLAYER_CHAR, PLAYER);                                            // Create the player sprite.
     for (uint8_t i = 0; i < ENEMY_SPRITE_COUNT; i++) {
         lcd.createChar(ENEMY_CHAR[i], ENEMY_SPRITE[i]);                             // Create the enemy sprite.
     }
-
     EnterIntro();
 }
 
