@@ -54,9 +54,9 @@ const uint8_t trig[3] = { 24, 23, 22 };                                         
 const uint8_t motor[3] = { 44, 0, 0 };                                              // ! Change the pins.
 
 struct Enemy {
-int8_t sprite;
-int8_t x;
-bool y;
+    int8_t sprite;
+    int8_t x;
+    bool y;
 };
 Enemy enemies[ENEMY_AMOUNT];
 
@@ -103,9 +103,9 @@ void BuyItem(uint8_t item) {
     delay(1000);
     lcd.clear();
     lcd.print("Moving the Item!");
-    digitalWrite(motor[0], HIGH);                                                   // Start to move the belt.
+    digitalWrite(motor[item], HIGH);                                                   // Start to move the belt.
     delay(MOTOR_ACTIVE_LENGTH_IN_MILLIS);
-    digitalWrite(motor[0], LOW);                                                    // Stops the belt.
+    digitalWrite(motor[item], LOW);                                                    // Stops the belt.
     lcd.clear();
     lcd.print("Thank You!");
     isItemAvalible[item] = IsItemAvalible(item);                                    // Checking if there is still an a item on the belt.
@@ -127,23 +127,23 @@ void EnterIntro() {
     lcd.clear();
     lcd.print("Builded by Gabi.");
     PrintAt(0, 1, "Coded   by Ron .");
-    delay(200);
+    delay(700);
     for (uint8_t i = 0; i < 15; i++) {
-        delay(200);
+        delay(400);
         lcd.scrollDisplayLeft();
     }
     lcd.clear();
     PrintAt(16, 0, "Presented to Daniel");
     PrintAt(25, 1, "2023");
     for (uint8_t i = 0; i < 35; i++) {
-        delay(20);
+        delay(200);
         lcd.scrollDisplayLeft();
     }
     delay(700);
     lcd.clear();
     PrintAt(3, 0, "The Vanding");
     PrintAt(5, 1, "Machine!");
-    delay(200);
+    delay(900);
     lcd.clear();
     lcd.print("Press any key to");
     PrintAt(5, 1, "<Play!>");
@@ -293,9 +293,10 @@ void UpdateGame() {
 void setup() {
     lcd.begin(16, 2);
     lcd.backlight();
-    for (uint8_t i = 0; i < 3; i++) {                                               // Seting up the ultrasonic sensors.
+    for (uint8_t i = 0; i < 3; i++) {                                               // Seting up the ultrasonic sensors and motors.
         pinMode(trig[i], OUTPUT);
         pinMode(echo[i], INPUT);
+        pinMode(motor[i], OUTPUT);
     }
     lcd.createChar(PLAYER_CHAR, PLAYER);                                            // Create the player sprite.
     for (uint8_t i = 0; i < ENEMY_SPRITE_COUNT; i++) {
