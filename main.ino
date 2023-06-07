@@ -114,6 +114,7 @@ void BuyItem(uint8_t item) {
 
 void ShowItem(uint8_t item) {                                                       // Showing item if player have enough money and the item is avalible.
     if (isItemAvalible[item] && score / 10 >= itemCost[item]) {
+        char string[16];
         sprintf(string, "%i.%s|$%i", item, itemName[item], itemCost[item]);
         lcd.print(string);
     }
@@ -185,26 +186,6 @@ void EnterShop() {
     currentState = SHOP;
 }
 
-void UpdateEnemies() {
-    if (currentTimeInMillis % updateTimeDelayInMillis != 0)                     // Update the enemies position only every x time.
-        return;                      
-    score++;                                                                    // Adding score.
-    for (size_t c = 0; c < ENEMY_AMOUNT; c++) {                                 // Updating every enemy.
-        enemies[c].x--;                                                         // Move enemy left.
-        if (enemies[c].x < 0) {                                                 // Check if enemy is not out of the bounds of the Lcd screen.
-            enemies[c].x = 16 + random(ENEMY_AMOUNT * 10);                      // Set the enemy position randomly.
-            enemies[c].y = random(2);
-            enemies[c].sprite = ENEMY_CHAR[random(ENEMY_SPRITE_COUNT)];         // Set the enemy sprite randomly.
-        }
-        if (enemies[c].x != 0)
-        continue;                                                               // Checking if the enemy is in the positon x of the player.
-        if (enemies[c].y == playerY) {                                          // Checking if the enemy y is the same as the player y.
-            EnterEndScreen();
-            return;
-        }
-    }
-}
-
 // =============================================================================
 // Update functions
 // =============================================================================
@@ -274,12 +255,28 @@ void PlayerInput() {
 
 void UpdateGame() {
     PlayerInput();
-    UpdateEnemies();
+    if (currentTimeInMillis % updateTimeDelayInMillis == 0) {                       // Update the enemies position only every x time.                  
+        score++;                                                                    // Adding score.
+        for (size_t c = 0; c < ENEMY_AMOUNT; c++) {                                 // Updating every enemy.
+            enemies[c].x--;                                                         // Move enemy left.
+            if (enemies[c].x < 0) {                                                 // Check if enemy is not out of the bounds of the Lcd screen.
+                enemies[c].x = 16 + random(ENEMY_AMOUNT * 10);                      // Set the enemy position randomly.
+                enemies[c].y = random(2);
+                enemies[c].sprite = ENEMY_CHAR[random(ENEMY_SPRITE_COUNT)];         // Set the enemy sprite randomly.
+            }
+            if (enemies[c].x != 0)
+                continue;                                                           // Checking if the enemy is in the positon x of the player.
+            if (enemies[c].y == playerY) {                                          // Checking if the enemy y is the same as the player y.
+                EnterEndScreen();
+                return;
+            }
+        }
+    }
     if (currentTimeInMillis % UPDATE_SPEED_DELAY_IN_MILLIS == 0) {                  // Making the enemies positon to update faster every x time.
         updateTimeDelayInMillis -= 1;
         if (updateTimeDelayInMillis < 100)                                          // Clamping the update speed.
             updateTimeDelayInMillis = 100;
-    }
+    }  
     if (currentTimeInMillis % updateTimeDelayInMillis == 0 || isNeededToUpdateLcd) { // Update the lcd screen every x time or when the player moved.
         UpdateGameLcd();
         isNeededToUpdateLcd = false;
@@ -292,6 +289,7 @@ void UpdateGame() {
 
 void setup() {
     lcd.begin(16, 2);
+    lcd.init();
     lcd.backlight();
     for (uint8_t i = 0; i < 3; i++) {                                               // Seting up the ultrasonic sensors and motors.
         pinMode(trig[i], OUTPUT);
